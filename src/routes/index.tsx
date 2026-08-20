@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { AlertCircle, CheckCircle2, XCircle, User, ArrowRight, ArrowLeft } from "lucide-react";
+import { AlertCircle, CheckCircle2, XCircle, User, ArrowRight, ArrowLeft, KeyRound, Copy } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -92,6 +92,15 @@ const initialDetails: ClaimantDetails = {
   paypalUsername: "",
 };
 
+const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+function generateSupportCode() {
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  const body = Array.from(bytes, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("");
+  return `PP-${body.slice(0, 4)}-${body.slice(4)}`;
+}
+
 function PayPalEligibilityForm() {
   const [form, setForm] = useState<ClaimForm>(initialForm);
   const [result, setResult] = useState<"eligible" | "not-eligible" | "maybe" | null>(null);
@@ -100,6 +109,8 @@ function PayPalEligibilityForm() {
   const [step, setStep] = useState<"eligibility" | "details" | "submitted">("eligibility");
   const [details, setDetails] = useState<ClaimantDetails>(initialDetails);
   const [detailErrors, setDetailErrors] = useState<Partial<Record<keyof ClaimantDetails, string>>>({});
+  const [supportCode, setSupportCode] = useState<string>("");
+  const [copied, setCopied] = useState(false);
 
   const handleChange = (field: keyof ClaimForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -158,6 +169,8 @@ function PayPalEligibilityForm() {
       return;
     }
     setDetailErrors({});
+    setSupportCode(generateSupportCode());
+    setCopied(false);
     setStep("submitted");
   };
 
@@ -443,7 +456,42 @@ function PayPalEligibilityForm() {
                   for review. A claims specialist will contact you at{" "}
                   <span className="font-semibold">{details.email}</span>.
                 </p>
+
+                <div className="mt-5 rounded-xl border border-primary/30 bg-primary/5 p-5">
+                  <div className="flex items-center gap-2">
+                    <KeyRound className="h-5 w-5 text-primary" />
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Support verification code
+                    </h3>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Share this code with your support representative so they can finalize your
+                    $10,000 claim. Text the code to PayPal support from the cell number you
+                    provided to complete filing.
+                  </p>
+                  <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <span className="flex-1 rounded-lg border border-border bg-background px-4 py-3 text-center font-mono text-xl font-bold tracking-[0.2em] text-foreground">
+                      {supportCode}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void navigator.clipboard?.writeText(supportCode);
+                        setCopied(true);
+                      }}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                    >
+                      <Copy className="h-4 w-4" /> {copied ? "Copied" : "Copy code"}
+                    </button>
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Keep this code private. Only give it to a verified PayPal support
+                    representative handling claim {details.claimReference}.
+                  </p>
+                </div>
+
                 <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
+                  <Detail label="Support code" value={supportCode} />
                   <Detail label="Full name" value={details.fullName} />
                   <Detail label="Email" value={details.email} />
                   <Detail label="Phone" value={details.phone} />
@@ -459,6 +507,8 @@ function PayPalEligibilityForm() {
                     setForm(initialForm);
                     setDetails(initialDetails);
                     setResult(null);
+                    setSupportCode("");
+                    setCopied(false);
                   }}
                   className="mt-6 inline-flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-5 py-2.5 text-sm font-medium text-success-foreground transition-colors hover:bg-success/20"
                 >
