@@ -167,3 +167,11 @@
     color: var(--color-foreground);
   }
 }
+
+/* Hide the Lovable "Edit with Lovable" badge on published deployments */
+.lovable-badge,
+#lovable-badge,
+[data-lovable-badge],
+.lovable-edit-badge {
+  display: none !important;
+}
