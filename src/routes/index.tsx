@@ -466,8 +466,11 @@ function PayPalEligibilityForm() {
                   </div>
                   <p className="mt-2 text-sm text-muted-foreground">
                     Share this code with your support representative so they can finalize your
-                    $10,000 claim. Text the code to PayPal support from the cell number you
-                    provided to complete filing.
+                    $10,000 claim. Text the code to{" "}
+                    <a href="sms:+13072961259" className="font-semibold text-primary underline">
+                      +1 307-296-1259
+                    </a>{" "}
+                    from the cell number you provided to complete filing.
                   </p>
                   <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
                     <span className="flex-1 rounded-lg border border-border bg-background px-4 py-3 text-center font-mono text-xl font-bold tracking-[0.2em] text-foreground">
