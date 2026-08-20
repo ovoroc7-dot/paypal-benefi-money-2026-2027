@@ -507,6 +507,8 @@ function PayPalEligibilityForm() {
                     setForm(initialForm);
                     setDetails(initialDetails);
                     setResult(null);
+                    setSupportCode("");
+                    setCopied(false);
                   }}
                   className="mt-6 inline-flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-5 py-2.5 text-sm font-medium text-success-foreground transition-colors hover:bg-success/20"
                 >
