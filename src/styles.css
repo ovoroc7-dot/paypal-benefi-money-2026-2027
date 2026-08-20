@@ -65,6 +65,7 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-error: var(--error);
   --color-error-foreground: var(--error-foreground);
+  --color-surface-blue: var(--surface-blue);
 }
 
 :root {
