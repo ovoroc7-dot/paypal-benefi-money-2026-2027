@@ -58,28 +58,16 @@ function PayPalEligibilityForm() {
 
     const data = parse.data;
 
-    // Hard disqualifiers
-    if (data.hasPayPalAccount === "no" || data.usResident === "no") {
+    if (data.hasPayPalAccount === "no" || data.usResident === "no" || data.lossAmount !== "within") {
       setResult("not-eligible");
       return;
     }
 
-    if (data.lossAmount !== "within") {
+    if (data.timelyDispute === "no" || data.unresolved === "no") {
       setResult("not-eligible");
       return;
     }
 
-    if (data.timelyDispute === "no") {
-      setResult("not-eligible");
-      return;
-    }
-
-    if (data.unresolved === "no") {
-      setResult("not-eligible");
-      return;
-    }
-
-    // Soft qualifiers
     if (
       data.timelyDispute === "yes" &&
       (data.unresolved === "yes" || data.unresolved === "partial") &&
@@ -173,7 +161,7 @@ function PayPalEligibilityForm() {
           </div>
 
           {errors.length > 0 && (
-            <div className="mt-6 rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
+            <div className="mt-6 rounded-lg border border-error/20 bg-error/10 p-4 text-sm text-error">
               <ul className="list-disc space-y-1 pl-5">
                 {errors.map((e, i) => (
                   <li key={i}>{e}</li>
@@ -194,14 +182,12 @@ function PayPalEligibilityForm() {
         </div>
 
         {result === "eligible" && (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 dark:border-emerald-900 dark:bg-emerald-950/40 sm:p-8">
+          <div className="rounded-2xl border border-success/20 bg-success/10 p-6 sm:p-8">
             <div className="flex items-start gap-4">
-              <CheckCircle2 className="mt-1 h-6 w-6 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <CheckCircle2 className="mt-1 h-6 w-6 shrink-0 text-success" />
               <div>
-                <h2 className="text-xl font-semibold text-emerald-900 dark:text-emerald-100">
-                  You may be eligible
-                </h2>
-                <p className="mt-2 text-emerald-800 dark:text-emerald-200">
+                <h2 className="text-xl font-semibold text-success-foreground">You may be eligible</h2>
+                <p className="mt-2 text-success-foreground/80">
                   Based on your answers, your claim appears to fall within the{" "}
                   <span className="font-semibold">$10,000–$20,000</span> eligibility range and you
                   meet the key requirements. Consider speaking with a qualified attorney or claims
@@ -213,14 +199,12 @@ function PayPalEligibilityForm() {
         )}
 
         {result === "not-eligible" && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-6 dark:border-red-900 dark:bg-red-950/40 sm:p-8">
+          <div className="rounded-2xl border border-error/20 bg-error/10 p-6 sm:p-8">
             <div className="flex items-start gap-4">
-              <XCircle className="mt-1 h-6 w-6 shrink-0 text-red-600 dark:text-red-400" />
+              <XCircle className="mt-1 h-6 w-6 shrink-0 text-error" />
               <div>
-                <h2 className="text-xl font-semibold text-red-900 dark:text-red-100">
-                  You do not appear eligible
-                </h2>
-                <p className="mt-2 text-red-800 dark:text-red-200">
+                <h2 className="text-xl font-semibold text-error-foreground">You do not appear eligible</h2>
+                <p className="mt-2 text-error-foreground/80">
                   One or more of your answers does not match the requirements for this claim
                   category. This is not legal advice; if you believe your situation is unusual, you
                   may still want to consult an attorney.
@@ -231,14 +215,12 @@ function PayPalEligibilityForm() {
         )}
 
         {result === "maybe" && (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 dark:border-amber-900 dark:bg-amber-950/40 sm:p-8">
+          <div className="rounded-2xl border border-warning/20 bg-warning/10 p-6 sm:p-8">
             <div className="flex items-start gap-4">
-              <AlertCircle className="mt-1 h-6 w-6 shrink-0 text-amber-600 dark:text-amber-400" />
+              <AlertCircle className="mt-1 h-6 w-6 shrink-0 text-warning" />
               <div>
-                <h2 className="text-xl font-semibold text-amber-900 dark:text-amber-100">
-                  Eligibility is uncertain
-                </h2>
-                <p className="mt-2 text-amber-800 dark:text-amber-200">
+                <h2 className="text-xl font-semibold text-warning-foreground">Eligibility is uncertain</h2>
+                <p className="mt-2 text-warning-foreground/80">
                   You meet some requirements, but we need more information (such as exact timing or
                   full documentation) to confirm eligibility. Consider gathering additional records
                   and consulting a claims specialist.
