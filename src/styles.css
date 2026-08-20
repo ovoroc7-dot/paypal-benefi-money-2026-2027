@@ -108,6 +108,7 @@
   --warning-foreground: oklch(0.2 0.02 85.0);
   --error: oklch(0.55 0.2 25.0);
   --error-foreground: oklch(0.98 0.003 25.0);
+  --surface-blue: oklch(0.96 0.02 255);
 }
 
 .dark {
@@ -149,6 +150,7 @@
   --warning-foreground: oklch(0.98 0.003 85.0);
   --error: oklch(0.45 0.18 25.0);
   --error-foreground: oklch(0.98 0.003 25.0);
+  --surface-blue: oklch(0.2 0.04 265);
 }
 
 @layer base {
