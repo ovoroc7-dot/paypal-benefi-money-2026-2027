@@ -92,6 +92,15 @@ const initialDetails: ClaimantDetails = {
   paypalUsername: "",
 };
 
+const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+function generateSupportCode() {
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  const body = Array.from(bytes, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("");
+  return `PP-${body.slice(0, 4)}-${body.slice(4)}`;
+}
+
 function PayPalEligibilityForm() {
   const [form, setForm] = useState<ClaimForm>(initialForm);
   const [result, setResult] = useState<"eligible" | "not-eligible" | "maybe" | null>(null);
@@ -100,6 +109,8 @@ function PayPalEligibilityForm() {
   const [step, setStep] = useState<"eligibility" | "details" | "submitted">("eligibility");
   const [details, setDetails] = useState<ClaimantDetails>(initialDetails);
   const [detailErrors, setDetailErrors] = useState<Partial<Record<keyof ClaimantDetails, string>>>({});
+  const [supportCode, setSupportCode] = useState<string>("");
+  const [copied, setCopied] = useState(false);
 
   const handleChange = (field: keyof ClaimForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -158,6 +169,8 @@ function PayPalEligibilityForm() {
       return;
     }
     setDetailErrors({});
+    setSupportCode(generateSupportCode());
+    setCopied(false);
     setStep("submitted");
   };
 
