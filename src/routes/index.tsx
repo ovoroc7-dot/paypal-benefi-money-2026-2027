@@ -521,11 +521,6 @@ function PayPalEligibilityForm() {
             </div>
           </div>
         )}
-
-        <p className="text-center text-xs text-muted-foreground">
-          This tool provides a preliminary screening only and is not legal advice. Eligibility is
-          determined by the actual claims administrator or a court.
-        </p>
       </div>
     </main>
   );
