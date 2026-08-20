@@ -153,6 +153,10 @@
   --surface-blue: oklch(0.2 0.04 265);
 }
 
+@utility bg-gradient-claim {
+  background-image: linear-gradient(180deg, var(--background) 0%, var(--surface-blue) 100%);
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
