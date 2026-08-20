@@ -99,7 +99,7 @@ function PayPalEligibilityForm() {
 
   const [step, setStep] = useState<"eligibility" | "details" | "submitted">("eligibility");
   const [details, setDetails] = useState<ClaimantDetails>(initialDetails);
-  const [detailErrors, setDetailErrors] = useState<Record<string, string>>({});
+  const [detailErrors, setDetailErrors] = useState<Partial<Record<keyof ClaimantDetails, string>>>({});
 
   const handleChange = (field: keyof ClaimForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
