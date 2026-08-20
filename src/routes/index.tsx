@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { AlertCircle, CheckCircle2, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, XCircle, User, ArrowRight, ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -37,10 +37,69 @@ const initialForm: ClaimForm = {
   documentation: "yes",
 };
 
+const phoneRegex = /^[+]?[\d\s\-().]{7,20}$/;
+
+const detailsSchema = z.object({
+  fullName: z
+    .string()
+    .trim()
+    .min(2, "Full name must be at least 2 characters")
+    .max(100, "Full name must be less than 100 characters"),
+  email: z
+    .string()
+    .trim()
+    .min(1, "Email is required")
+    .email("Please enter a valid email address")
+    .max(255, "Email must be less than 255 characters"),
+  phone: z
+    .string()
+    .trim()
+    .min(1, "Phone number is required")
+    .regex(phoneRegex, "Please enter a valid phone number")
+    .max(20, "Phone number is too long"),
+  claimReference: z
+    .string()
+    .trim()
+    .min(3, "Claim reference must be at least 3 characters")
+    .max(50, "Claim reference must be less than 50 characters"),
+  paypalEmail: z
+    .string()
+    .trim()
+    .min(1, "PayPal email is required")
+    .email("Please enter a valid PayPal email address")
+    .max(255, "PayPal email must be less than 255 characters"),
+  paypalAccountName: z
+    .string()
+    .trim()
+    .min(2, "PayPal account name must be at least 2 characters")
+    .max(100, "PayPal account name must be less than 100 characters"),
+  paypalUsername: z
+    .string()
+    .trim()
+    .min(2, "PayPal username must be at least 2 characters")
+    .max(50, "PayPal username must be less than 50 characters"),
+});
+
+type ClaimantDetails = z.infer<typeof detailsSchema>;
+
+const initialDetails: ClaimantDetails = {
+  fullName: "",
+  email: "",
+  phone: "",
+  claimReference: "",
+  paypalEmail: "",
+  paypalAccountName: "",
+  paypalUsername: "",
+};
+
 function PayPalEligibilityForm() {
   const [form, setForm] = useState<ClaimForm>(initialForm);
   const [result, setResult] = useState<"eligible" | "not-eligible" | "maybe" | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
+
+  const [step, setStep] = useState<"eligibility" | "details" | "submitted">("eligibility");
+  const [details, setDetails] = useState<ClaimantDetails>(initialDetails);
+  const [detailErrors, setDetailErrors] = useState<Partial<Record<keyof ClaimantDetails, string>>>({});
 
   const handleChange = (field: keyof ClaimForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -80,6 +139,28 @@ function PayPalEligibilityForm() {
     setResult("maybe");
   };
 
+  const canProceed = result === "eligible" || result === "maybe";
+
+  const handleDetailsChange = (field: keyof ClaimantDetails, value: string) => {
+    setDetails((prev) => ({ ...prev, [field]: value }));
+    setDetailErrors((prev) => ({ ...prev, [field]: "" }));
+  };
+
+  const submitDetails = () => {
+    const parse = detailsSchema.safeParse(details);
+    if (!parse.success) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of parse.error.errors) {
+        const key = String(issue.path[0] ?? "_");
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+      }
+      setDetailErrors(fieldErrors);
+      return;
+    }
+    setDetailErrors({});
+    setStep("submitted");
+  };
+
   return (
     <main className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-2xl space-y-8">
@@ -93,112 +174,129 @@ function PayPalEligibilityForm() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
-          <div className="space-y-6">
-            <RadioGroup
-              label="Do you (or did you) have a PayPal account?"
-              value={form.hasPayPalAccount}
-              onChange={(v) => handleChange("hasPayPalAccount", v)}
-              options={[
-                { value: "yes", label: "Yes" },
-                { value: "no", label: "No" },
-              ]}
-            />
+        {/* Step indicator */}
+        <ol className="flex items-center justify-center gap-2 text-sm">
+          <StepDot label="1. Eligibility" active={step === "eligibility"} done={step !== "eligibility"} />
+          <span className="h-px w-8 bg-border" />
+          <StepDot label="2. Your details" active={step === "details"} done={step === "submitted"} />
+          <span className="h-px w-8 bg-border" />
+          <StepDot label="3. Submitted" active={step === "submitted"} done={false} />
+        </ol>
 
-            <RadioGroup
-              label="Are you a U.S. resident?"
-              value={form.usResident}
-              onChange={(v) => handleChange("usResident", v)}
-              options={[
-                { value: "yes", label: "Yes" },
-                { value: "no", label: "No" },
-              ]}
-            />
+        {step !== "details" && (
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+            <div className="space-y-6">
+              <RadioGroup
+                label="Do you (or did you) have a PayPal account?"
+                value={form.hasPayPalAccount}
+                onChange={(v) => handleChange("hasPayPalAccount", v)}
+                options={[
+                  { value: "yes", label: "Yes" },
+                  { value: "no", label: "No" },
+                ]}
+              />
 
-            <RadioGroup
-              label="What is the amount of your loss or dispute?"
-              value={form.lossAmount}
-              onChange={(v) => handleChange("lossAmount", v)}
-              options={[
-                { value: "under", label: "Less than $10,000" },
-                { value: "within", label: "$10,000 – $20,000" },
-                { value: "over", label: "More than $20,000" },
-              ]}
-            />
+              <RadioGroup
+                label="Are you a U.S. resident?"
+                value={form.usResident}
+                onChange={(v) => handleChange("usResident", v)}
+                options={[
+                  { value: "yes", label: "Yes" },
+                  { value: "no", label: "No" },
+                ]}
+              />
 
-            <RadioGroup
-              label="Did you file a PayPal dispute or claim within the required time frame?"
-              value={form.timelyDispute}
-              onChange={(v) => handleChange("timelyDispute", v)}
-              options={[
-                { value: "yes", label: "Yes" },
-                { value: "no", label: "No" },
-                { value: "unsure", label: "I'm not sure" },
-              ]}
-            />
+              <RadioGroup
+                label="What is the amount of your loss or dispute?"
+                value={form.lossAmount}
+                onChange={(v) => handleChange("lossAmount", v)}
+                options={[
+                  { value: "under", label: "Less than $10,000" },
+                  { value: "within", label: "$10,000 – $20,000" },
+                  { value: "over", label: "More than $20,000" },
+                ]}
+              />
 
-            <RadioGroup
-              label="Was your dispute denied, unresolved, or only partially resolved by PayPal?"
-              value={form.unresolved}
-              onChange={(v) => handleChange("unresolved", v)}
-              options={[
-                { value: "yes", label: "Yes — fully denied or unresolved" },
-                { value: "partial", label: "Partially resolved" },
-                { value: "no", label: "No — fully resolved in my favor" },
-              ]}
-            />
+              <RadioGroup
+                label="Did you file a PayPal dispute or claim within the required time frame?"
+                value={form.timelyDispute}
+                onChange={(v) => handleChange("timelyDispute", v)}
+                options={[
+                  { value: "yes", label: "Yes" },
+                  { value: "no", label: "No" },
+                  { value: "unsure", label: "I'm not sure" },
+                ]}
+              />
 
-            <RadioGroup
-              label="Do you have supporting documentation (receipts, emails, correspondence, etc.)?"
-              value={form.documentation}
-              onChange={(v) => handleChange("documentation", v)}
-              options={[
-                { value: "yes", label: "Yes, full documentation" },
-                { value: "some", label: "Some documentation" },
-                { value: "no", label: "No documentation" },
-              ]}
-            />
-          </div>
+              <RadioGroup
+                label="Was your dispute denied, unresolved, or only partially resolved by PayPal?"
+                value={form.unresolved}
+                onChange={(v) => handleChange("unresolved", v)}
+                options={[
+                  { value: "yes", label: "Yes — fully denied or unresolved" },
+                  { value: "partial", label: "Partially resolved" },
+                  { value: "no", label: "No — fully resolved in my favor" },
+                ]}
+              />
 
-          {errors.length > 0 && (
-            <div className="mt-6 rounded-lg border border-error/20 bg-error/10 p-4 text-sm text-error">
-              <ul className="list-disc space-y-1 pl-5">
-                {errors.map((e, i) => (
-                  <li key={i}>{e}</li>
-                ))}
-              </ul>
+              <RadioGroup
+                label="Do you have supporting documentation (receipts, emails, correspondence, etc.)?"
+                value={form.documentation}
+                onChange={(v) => handleChange("documentation", v)}
+                options={[
+                  { value: "yes", label: "Yes, full documentation" },
+                  { value: "some", label: "Some documentation" },
+                  { value: "no", label: "No documentation" },
+                ]}
+              />
             </div>
-          )}
 
-          <div className="mt-8">
-            <button
-              type="button"
-              onClick={checkEligibility}
-              className="inline-flex w-full items-center justify-center rounded-lg bg-primary px-6 py-3 text-base font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            >
-              Check Eligibility
-            </button>
+            {errors.length > 0 && (
+              <div className="mt-6 rounded-lg border border-error/20 bg-error/10 p-4 text-sm text-error">
+                <ul className="list-disc space-y-1 pl-5">
+                  {errors.map((e, i) => (
+                    <li key={i}>{e}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="mt-8">
+              <button
+                type="button"
+                onClick={checkEligibility}
+                className="inline-flex w-full items-center justify-center rounded-lg bg-primary px-6 py-3 text-base font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                Check Eligibility
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
-        {result === "eligible" && (
+        {step !== "details" && result === "eligible" && (
           <div className="rounded-2xl border border-success/20 bg-success/10 p-6 sm:p-8">
             <div className="flex items-start gap-4">
               <CheckCircle2 className="mt-1 h-6 w-6 shrink-0 text-success" />
-              <div>
+              <div className="flex-1">
                 <h2 className="text-xl font-semibold text-success-foreground">You may be eligible</h2>
                 <p className="mt-2 text-success-foreground/80">
                   Based on your answers, your claim appears to fall within the{" "}
                   <span className="font-semibold">$10,000–$20,000</span> eligibility range and you
-                  meet the key requirements. Consider speaking with a qualified attorney or claims
-                  specialist to confirm your options and next steps.
+                  meet the key requirements. Provide your details to continue filing your claim.
                 </p>
+                <button
+                  type="button"
+                  onClick={() => setStep("details")}
+                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-success px-5 py-2.5 text-sm font-medium text-success-foreground transition-colors hover:bg-success/90"
+                >
+                  Continue to claim details <ArrowRight className="h-4 w-4" />
+                </button>
               </div>
             </div>
           </div>
         )}
 
-        {result === "not-eligible" && (
+        {step !== "details" && result === "not-eligible" && (
           <div className="rounded-2xl border border-error/20 bg-error/10 p-6 sm:p-8">
             <div className="flex items-start gap-4">
               <XCircle className="mt-1 h-6 w-6 shrink-0 text-error" />
@@ -214,17 +312,158 @@ function PayPalEligibilityForm() {
           </div>
         )}
 
-        {result === "maybe" && (
+        {step !== "details" && result === "maybe" && (
           <div className="rounded-2xl border border-warning/20 bg-warning/10 p-6 sm:p-8">
             <div className="flex items-start gap-4">
               <AlertCircle className="mt-1 h-6 w-6 shrink-0 text-warning" />
-              <div>
+              <div className="flex-1">
                 <h2 className="text-xl font-semibold text-warning-foreground">Eligibility is uncertain</h2>
                 <p className="mt-2 text-warning-foreground/80">
                   You meet some requirements, but we need more information (such as exact timing or
-                  full documentation) to confirm eligibility. Consider gathering additional records
-                  and consulting a claims specialist.
+                  full documentation) to confirm eligibility. You can still provide your details and
+                  a claims specialist will review your case.
                 </p>
+                <button
+                  type="button"
+                  onClick={() => setStep("details")}
+                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-warning px-5 py-2.5 text-sm font-medium text-warning-foreground transition-colors hover:bg-warning/90"
+                >
+                  Continue to claim details <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === "details" && (
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+            <div className="mb-6 flex items-center gap-2">
+              <User className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-semibold text-foreground">Claimant details</h2>
+            </div>
+
+            <div className="space-y-5">
+              <TextField
+                label="Full name"
+                value={details.fullName}
+                onChange={(v) => handleDetailsChange("fullName", v)}
+                error={detailErrors.fullName}
+                placeholder="Jane Doe"
+                autoComplete="name"
+              />
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <TextField
+                  label="Email address"
+                  type="email"
+                  value={details.email}
+                  onChange={(v) => handleDetailsChange("email", v)}
+                  error={detailErrors.email}
+                  placeholder="jane@example.com"
+                  autoComplete="email"
+                />
+                <TextField
+                  label="Cell phone number"
+                  type="tel"
+                  value={details.phone}
+                  onChange={(v) => handleDetailsChange("phone", v)}
+                  error={detailErrors.phone}
+                  placeholder="+1 555 123 4567"
+                  autoComplete="tel"
+                />
+              </div>
+
+              <TextField
+                label="Claim reference"
+                value={details.claimReference}
+                onChange={(v) => handleDetailsChange("claimReference", v)}
+                error={detailErrors.claimReference}
+                placeholder="e.g. PP-2026-001234"
+              />
+
+              <div className="border-t border-border pt-5">
+                <p className="mb-4 text-sm font-medium text-foreground">PayPal account information</p>
+
+                <TextField
+                  label="PayPal email address"
+                  type="email"
+                  value={details.paypalEmail}
+                  onChange={(v) => handleDetailsChange("paypalEmail", v)}
+                  error={detailErrors.paypalEmail}
+                  placeholder="yourname@email.com"
+                  autoComplete="email"
+                />
+
+                <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                  <TextField
+                    label="PayPal account full name"
+                    value={details.paypalAccountName}
+                    onChange={(v) => handleDetailsChange("paypalAccountName", v)}
+                    error={detailErrors.paypalAccountName}
+                    placeholder="Name on the PayPal account"
+                  />
+                  <TextField
+                    label="PayPal username"
+                    value={details.paypalUsername}
+                    onChange={(v) => handleDetailsChange("paypalUsername", v)}
+                    error={detailErrors.paypalUsername}
+                    placeholder="@yourusername"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-between">
+              <button
+                type="button"
+                onClick={() => setStep("eligibility")}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+              >
+                <ArrowLeft className="h-4 w-4" /> Back
+              </button>
+              <button
+                type="button"
+                onClick={submitDetails}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                Submit claim details
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === "submitted" && (
+          <div className="rounded-2xl border border-success/20 bg-success/10 p-6 sm:p-8">
+            <div className="flex items-start gap-4">
+              <CheckCircle2 className="mt-1 h-6 w-6 shrink-0 text-success" />
+              <div className="flex-1">
+                <h2 className="text-xl font-semibold text-success-foreground">Details submitted</h2>
+                <p className="mt-2 text-success-foreground/80">
+                  Thank you, {details.fullName.split(" ")[0]}. Your claim details have been recorded
+                  for review. A claims specialist will contact you at{" "}
+                  <span className="font-semibold">{details.email}</span>.
+                </p>
+                <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
+                  <Detail label="Full name" value={details.fullName} />
+                  <Detail label="Email" value={details.email} />
+                  <Detail label="Phone" value={details.phone} />
+                  <Detail label="Claim reference" value={details.claimReference} />
+                  <Detail label="PayPal email" value={details.paypalEmail} />
+                  <Detail label="PayPal account name" value={details.paypalAccountName} />
+                  <Detail label="PayPal username" value={details.paypalUsername} />
+                </dl>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep("eligibility");
+                    setForm(initialForm);
+                    setDetails(initialDetails);
+                    setResult(null);
+                  }}
+                  className="mt-6 inline-flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-5 py-2.5 text-sm font-medium text-success-foreground transition-colors hover:bg-success/20"
+                >
+                  Start a new claim
+                </button>
               </div>
             </div>
           </div>
@@ -236,6 +475,66 @@ function PayPalEligibilityForm() {
         </p>
       </div>
     </main>
+  );
+}
+
+function StepDot({ label, active, done }: { label: string; active: boolean; done: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
+        active
+          ? "bg-primary text-primary-foreground"
+          : done
+            ? "bg-primary/10 text-primary"
+            : "bg-muted text-muted-foreground"
+      }`}
+    >
+      {label}
+    </span>
+  );
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-card/50 px-3 py-2">
+      <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 font-medium text-foreground">{value}</dd>
+    </div>
+  );
+}
+
+function TextField({
+  label,
+  value,
+  onChange,
+  error,
+  placeholder,
+  type = "text",
+  autoComplete,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string | undefined;
+  placeholder?: string;
+  type?: string;
+  autoComplete?: string;
+}) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-sm font-medium text-foreground">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        className={`block w-full rounded-lg border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring ${
+          error ? "border-error focus:ring-error" : "border-border focus:ring-primary"
+        }`}
+      />
+      {error && <p className="mt-1 text-xs text-error">{error}</p>}
+    </div>
   );
 }
 
