@@ -515,7 +515,7 @@ function TextField({
   label: string;
   value: string;
   onChange: (value: string) => void;
-  error?: string;
+  error?: string | undefined;
   placeholder?: string;
   type?: string;
   autoComplete?: string;
